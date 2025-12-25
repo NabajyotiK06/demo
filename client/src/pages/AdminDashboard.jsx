@@ -16,12 +16,12 @@ import {
   MapPin,
   Maximize2,
   Clock,
-  BarChart2,
+
   Info,
   Zap,
   CircleParking
 } from "lucide-react";
-import AnalyticsPanel from "../components/AnalyticsPanel";
+
 import "../styles/layout.css";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -601,7 +601,7 @@ const AdminDashboard = () => {
                   </Marker>
                 ))}
               </Map>
-            ) : activeTab === "HISTORY" ? (
+            ) : (
               <div style={{ padding: "24px", overflowY: "auto", height: "100%" }}>
                 <h2 className="section-title">Resolved History</h2>
 
@@ -626,8 +626,6 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
-            ) : (
-              <AnalyticsPanel signals={signals} incidents={incidents} />
             )}
           </div>
 
@@ -654,15 +652,6 @@ const AdminDashboard = () => {
                 >
                   <List size={16} style={{ marginRight: "6px" }} />
                   History
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("ANALYTICS")}
-                  className={`btn ${activeTab === "ANALYTICS" ? "btn-primary" : ""}`}
-                  style={{ flex: "1 0 auto", border: activeTab !== "ANALYTICS" ? "1px solid #e5e7eb" : "none", background: activeTab !== "ANALYTICS" ? "white" : "", padding: "8px 12px" }}
-                >
-                  <BarChart2 size={16} style={{ marginRight: "6px" }} />
-                  Analytics
                 </button>
               </div>
 

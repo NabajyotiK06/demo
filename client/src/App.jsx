@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import RoutePlanner from "./pages/RoutePlanner";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
@@ -41,6 +42,15 @@ function App() {
               element={
                 <ProtectedRoute role="admin">
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute role="admin">
+                  <AnalyticsPage />
                 </ProtectedRoute>
               }
             />

@@ -103,7 +103,7 @@ const LandingPage = () => {
 
             {/* FOOTER */}
             <footer className="lp-footer">
-                <p>© 2024 MoveWise. All rights reserved.</p>
+                <p>© {new Date().getFullYear()} MoveWise. All rights reserved.</p>
             </footer>
         </div>
     );

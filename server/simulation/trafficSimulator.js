@@ -37,7 +37,8 @@ const simulateTraffic = (io) => {
       currentLight: "RED", // RED, YELLOW, GREEN
       timer: 0,
       phaseDuration: 10,
-      vehicles: s.vehicles || 0
+      vehicles: s.vehicles || 0,
+      trend: Math.random() > 0.5 ? 1 : -1
     }));
   }
 
@@ -69,12 +70,21 @@ const simulateTraffic = (io) => {
   // Simulation Loop (runs every 1 second)
   setInterval(() => {
     signalsState = signalsState.map(signal => {
-      let { currentLight, timer, vehicles } = signal;
+      let { currentLight, timer, vehicles, trend } = signal;
 
-      // 1. Simulate Vehicle Flux (More dynamic)
-      // Randomly flucuate more aggressively
-      const change = getRandomInt(-25, 30);
-      vehicles = Math.max(0, Math.min(200, vehicles + change)); // Higher cap
+      // 1. Simulate Vehicle Flux (Trend-based)
+      // 5% chance to flip trend
+      if (Math.random() < 0.05) trend *= -1;
+
+      // Calculate change based on trend
+      let change;
+      if (trend === 1) {
+        change = getRandomInt(-5, 15); // Bias positive
+      } else {
+        change = getRandomInt(-15, 5); // Bias negative
+      }
+
+      vehicles = Math.max(2, Math.min(200, vehicles + change));
 
       const congestion = getCongestionLevel(vehicles);
 
@@ -109,6 +119,7 @@ const simulateTraffic = (io) => {
         ...signal,
         vehicles,
         congestion,
+        trend,
         avgSpeed, // Added
         aqi,      // Added
         currentLight,

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Map, AlertTriangle, Menu, Mail, AlertCircle, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Map, AlertTriangle, Menu, Mail, AlertCircle, ClipboardList, BarChart2 } from "lucide-react";
 
 const Sidebar = ({ role }) => {
   const location = useLocation();
@@ -46,13 +46,23 @@ const Sidebar = ({ role }) => {
         </Link>
 
         {role === "admin" && (
-          <Link
-            to="/admin"
-            className={`nav-item ${isActive("/admin") ? "active" : ""}`}
-          >
-            <AlertTriangle size={20} />
-            <span>Incident Management</span>
-          </Link>
+          <>
+            <Link
+              to="/admin"
+              className={`nav-item ${isActive("/admin") ? "active" : ""}`}
+            >
+              <AlertTriangle size={20} />
+              <span>Incident Management</span>
+            </Link>
+
+            <Link
+              to="/analytics"
+              className={`nav-item ${isActive("/analytics") ? "active" : ""}`}
+            >
+              <BarChart2 size={20} />
+              <span>Analytics</span>
+            </Link>
+          </>
         )}
 
         {role !== "admin" && (
@@ -67,7 +77,7 @@ const Sidebar = ({ role }) => {
       </nav>
 
       <div className="sidebar-footer">
-        <p>© 2024 MoveWise</p>
+        <p>© {new Date().getFullYear()} MoveWise</p>
       </div>
     </div>
   );
