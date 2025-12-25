@@ -283,7 +283,7 @@ const RoutePlanner = () => {
       socket.off("incidentReported");
       socket.off("incidentUpdated");
     };
-  }, [routes]);
+  }, [routes, selectedRouteIndex]);
 
   const checkRouteImpact = (incident) => {
     // Simple check: is incident close to any point on the selected route?
@@ -296,16 +296,42 @@ const RoutePlanner = () => {
 
     if (!iLat || !iLng) return;
 
-    // Check proximity (simplified)
-    const isImpacted = routeCoords.some(coord => {
-      const [rLng, rLat] = coord;
-      const dist = Math.sqrt(Math.pow(rLng - iLng, 2) + Math.pow(rLat - iLat, 2));
-      return dist < 0.002; // Approx 200m (matching server logic)
-    });
+    // Check proximity using Point-to-Segment to ensure we catch incidents on the line
+    let isImpacted = false;
+
+    // Helper: Distance from point P to segment AB (Squared or Euclidian)
+    // We can use simplified Euclidean for small distances
+    const distToSegment = (p, v, w) => {
+      const l2 = (w[0] - v[0]) ** 2 + (w[1] - v[1]) ** 2;
+      if (l2 === 0) return Math.sqrt((p[0] - v[0]) ** 2 + (p[1] - v[1]) ** 2);
+      let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
+      t = Math.max(0, Math.min(1, t));
+      const proj = [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
+      return Math.sqrt((p[0] - proj[0]) ** 2 + (p[1] - proj[1]) ** 2);
+    };
+
+    const iPt = [iLng, iLat];
+    console.log("Checking Impact for Incident:", iPt);
+
+    for (let i = 0; i < routeCoords.length - 1; i++) {
+      const startPt = routeCoords[i];
+      const endPt = routeCoords[i + 1];
+      const dist = distToSegment(iPt, startPt, endPt);
+
+      // 0.003 degrees is approx 330m - increased sensitivity
+      if (dist < 0.003) {
+        console.log("Impact DETECTED at segment", i, "Dist:", dist);
+        isImpacted = true;
+        break;
+      }
+    }
 
     if (isImpacted) {
-      alert(`⚠️ New Incident Reported: ${incident.type}. Rerouting...`);
+      console.log("Rerouting triggered!");
+      setAiReasoning(`⚠️ New Incident Reported: ${incident.type}. Recalculating route...`);
       fetchRoutes(routeType || "optimal");
+    } else {
+      console.log("No impact detected on this route.");
     }
   };
 

@@ -44,9 +44,10 @@ router.post("/optimize-route", async (req, res) => {
 
     // Fetch active incidents (created in the last 24 hours, effectively active)
     const activeIncidents = await Incident.find({
-      timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Example: last 24h
+      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Fixed field name
       status: { $ne: "RESOLVED" }
     });
+    console.log("Active Incidents Found:", activeIncidents.length);
 
     // 2. Analyze Routes against Live Traffic & Incidents
     const analyzedRoutes = data.routes.map((route, index) => {
@@ -60,42 +61,55 @@ router.post("/optimize-route", async (req, res) => {
 
       const routeCoords = route.geometry.coordinates; // [lng, lat]
 
-      // We will sample the route to check for proximity to congestion
-      const sampleRate = Math.max(1, Math.floor(routeCoords.length / 20)); // Sample ~20 points
+      // Helper: Distance from point P to segment AB
+      const distToSegment = (p, v, w) => {
+        const l2 = (w[0] - v[0]) ** 2 + (w[1] - v[1]) ** 2;
+        if (l2 === 0) return Math.sqrt((p[0] - v[0]) ** 2 + (p[1] - v[1]) ** 2);
+        let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
+        t = Math.max(0, Math.min(1, t));
+        const proj = [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
+        return Math.sqrt((p[0] - proj[0]) ** 2 + (p[1] - proj[1]) ** 2);
+      };
 
-      for (let i = 0; i < routeCoords.length; i += sampleRate) {
-        const [rLng, rLat] = routeCoords[i];
+      // Check segments for better accuracy
+      for (let i = 0; i < routeCoords.length - 1; i++) {
+        const startPt = routeCoords[i]; // [lng, lat]
+        const endPt = routeCoords[i + 1];
 
         // Check Traffic Signals
         trafficSignals.forEach(signal => {
-          const dist = getDistance(rLat, rLng, signal.lat, signal.lng);
-          if (dist < 0.5) { // Within 500m of a signal
-            // Add penalty based on congestion
-            if (signal.congestion === "HIGH") {
-              congestionPenalty += 50;
-              if (!congestionDetails.includes(signal.name)) congestionDetails.push(signal.name);
-            } else if (signal.congestion === "MEDIUM") {
-              congestionPenalty += 20;
+          const sPt = [signal.lng, signal.lat];
+          // Approximate Degree distance. 0.005 degrees is approx 500m
+          const d = distToSegment(sPt, startPt, endPt);
+
+          if (d < 0.005) { // Within ~500m
+            if (!congestionDetails.includes(signal.name)) {
+              if (signal.congestion === "HIGH") {
+                congestionPenalty += 50;
+                congestionDetails.push(signal.name);
+              } else if (signal.congestion === "MEDIUM") {
+                congestionPenalty += 20;
+              }
             }
           }
         });
 
         // Check Incidents
         activeIncidents.forEach(incident => {
-          // incident.location might be String "lat,lng" or Object. Assuming logic based on Schema.
-          // Schema wasn't shown, but usually lat/lng are separate or in a string.
-          // Let's assume incident has lat/lng properties or we parse them.
-          // Based on typical schema in this project: lat, lng might be direct properties.
           const iLat = incident.lat || (incident.location && incident.location.lat);
           const iLng = incident.lng || (incident.location && incident.location.lng);
 
           if (iLat && iLng) {
-            const dist = getDistance(rLat, rLng, iLat, iLng);
-            // 0.2 km (200m) is better for city blocks. 1km was too wide and blocked parallel roads.
-            if (dist < 0.2) {
-              congestionPenalty += 500; // Large penalty for incidents
+            const iPt = [iLng, iLat];
+            // Increased threshold to 0.004 (approx 440m) to catch what frontend catches
+            const d = distToSegment(iPt, startPt, endPt);
+
+            if (d < 0.004) {
               const incidentLabel = `Incident: ${incident.type}`;
-              if (!congestionDetails.includes(incidentLabel)) congestionDetails.push(incidentLabel);
+              if (!congestionDetails.includes(incidentLabel)) {
+                congestionPenalty += 5000; // Massive penalty forces reroute
+                congestionDetails.push(incidentLabel);
+              }
             }
           }
         });
