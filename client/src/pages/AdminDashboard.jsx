@@ -1,7 +1,7 @@
 import { useEffect, useState, useContext, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
-import Map, { Marker, NavigationControl } from "react-map-gl";
+import Map, { Marker, NavigationControl, Source, Layer } from "react-map-gl";
 import { LocationContext } from "../context/LocationContext";
 import { useSocket } from "../context/SocketContext";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -16,12 +16,102 @@ import {
   MapPin,
   Maximize2,
   Clock,
-  BarChart2
+  BarChart2,
+  Info,
+  Zap,
+  CircleParking
 } from "lucide-react";
 import AnalyticsPanel from "../components/AnalyticsPanel";
 import "../styles/layout.css";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+import { MOCK_SERVICES, getNearestService } from "../data/mockServices";
+
+const HEATMAP_LAYER = {
+  id: "traffic-heat",
+  type: "heatmap",
+  paint: {
+    // Increase weight based on congestion level (using timer as proxy or mocked)
+    "heatmap-weight": [
+      "interpolate",
+      ["linear"],
+      ["get", "opacity"],
+      0, 0,
+      1, 5
+    ],
+    // Global intensity
+    "heatmap-intensity": [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      0, 1,
+      15, 5
+    ],
+    // Color Ramp
+    "heatmap-color": [
+      "interpolate",
+      ["linear"],
+      ["heatmap-density"],
+      0, "rgba(0,0,0,0)",
+      0.2, "rgb(59, 130, 246)", // Blue
+      0.5, "rgb(234, 179, 8)",  // Yellow
+      1, "rgb(239, 68, 68)"     // Red
+    ],
+    "heatmap-radius": [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      0, 5,
+      15, 30
+    ],
+    "heatmap-opacity": 0.8
+  }
+};
+
+// Helper Component for Dispatch Animation
+const DispatchMarker = ({ dispatch }) => {
+  const { currentPos, serviceType, timeLeft } = dispatch;
+
+  const getIcon = () => {
+    switch (serviceType) {
+      case "fire_station": return "🚒";
+      case "hospital": return "🚑";
+      case "police": return "🚓";
+      default: return "🚚";
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={{
+        background: "white",
+        borderRadius: "50%",
+        width: "36px",
+        height: "36px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "20px",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+        border: "2px solid #3b82f6",
+        animation: "pulse 1s infinite"
+      }}>
+        {getIcon()}
+      </div>
+      <div style={{
+        background: "#1f2937",
+        color: "white",
+        fontSize: "12px",
+        fontWeight: "bold",
+        padding: "2px 6px",
+        borderRadius: "4px",
+        marginTop: "4px"
+      }}>
+        {Math.ceil(timeLeft)}s
+      </div>
+    </div>
+  );
+};
 
 // Helper Component for Admin Signal Marker
 const AdminTrafficMarker = ({ signal, onClick }) => {
@@ -45,6 +135,22 @@ const AdminTrafficMarker = ({ signal, onClick }) => {
   );
 };
 
+// Helper: Calculate point along a path
+const getPointAlongPath = (path, progress) => {
+  if (!path || path.length < 2) return null;
+
+  const totalLength = path.length;
+  const index = Math.min(Math.floor(progress * (totalLength - 1)), totalLength - 2);
+  const start = path[index];
+  const end = path[index + 1];
+  const segmentProgress = (progress * (totalLength - 1)) - index;
+
+  const lat = start[1] + (end[1] - start[1]) * segmentProgress;
+  const lng = start[0] + (end[0] - start[0]) * segmentProgress;
+
+  return { lat, lng };
+};
+
 const AdminDashboard = () => {
   const socket = useSocket();
   const [incidents, setIncidents] = useState([]);
@@ -53,6 +159,13 @@ const AdminDashboard = () => {
   const [selectedSignal, setSelectedSignal] = useState(null); // Selected Signal for Control
   const [activeTab, setActiveTab] = useState("LIVE");
   const [alertedDepartments, setAlertedDepartments] = useState([]);
+  const [showServices, setShowServices] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showSignals, setShowSignals] = useState(true);
+
+
+  // Dispatch Animation State
+  const [activeDispatches, setActiveDispatches] = useState([]);
 
   // Emergency Broadcast State
   const [broadcastMessage, setBroadcastMessage] = useState("");
@@ -113,6 +226,43 @@ const AdminDashboard = () => {
     fetchIncidents();
   }, []);
 
+  // 🚑 Animation Loop for Dispatches
+  useEffect(() => {
+    if (activeDispatches.length === 0) return;
+
+    const interval = setInterval(() => {
+      setActiveDispatches(prev => {
+        const now = Date.now();
+        // Filter out arrived dispatches IMMEDIATELY
+        return prev.map(d => {
+          const elapsedTime = (now - d.startTime) / 1000; // in seconds
+          const progress = Math.min(elapsedTime / d.duration, 1);
+
+          // Calculate current position (Path Following)
+          let currentPos = d.currentPos;
+          if (d.routePath && d.routePath.length > 0) {
+            const point = getPointAlongPath(d.routePath, progress);
+            if (point) currentPos = point;
+          } else {
+            // Fallback to Linear Interpolation
+            const currentLat = d.startLocation.lat + (d.endLocation.lat - d.startLocation.lat) * progress;
+            const currentLng = d.startLocation.lng + (d.endLocation.lng - d.startLocation.lng) * progress;
+            currentPos = { lat: currentLat, lng: currentLng };
+          }
+
+          return {
+            ...d,
+            currentPos,
+            timeLeft: Math.max(d.duration - elapsedTime, 0),
+            isArrived: progress >= 1
+          };
+        }).filter(d => !d.isArrived); // Remove immediately upon arrival
+      });
+    }, 50); // 20 FPS
+
+    return () => clearInterval(interval);
+  }, [activeDispatches]);
+
   // 🔁 Reset department locks when new incident selected
   useEffect(() => {
     if (selectedIncident) {
@@ -158,6 +308,60 @@ const AdminDashboard = () => {
   const alertDepartment = async (department) => {
     if (!selectedIncident) return;
     if (alertedDepartments.includes(department)) return;
+
+    // START ANIMATION
+    let serviceType = "";
+    if (department === "Fire") serviceType = "fire_station";
+    if (department === "EMS") serviceType = "hospital";
+    if (department === "Police") serviceType = "police";
+
+    const nearestService = getNearestService(selectedIncident.lat, selectedIncident.lng, serviceType);
+
+    if (nearestService) {
+      // 1. Fetch Route from Mapbox
+      try {
+        const query = await fetch(
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${nearestService.lng},${nearestService.lat};${selectedIncident.lng},${selectedIncident.lat}?geometries=geojson&access_token=${MAPBOX_TOKEN}`
+        );
+        const json = await query.json();
+        const routePath = json.routes[0]?.geometry?.coordinates; // Array of [lng, lat]
+        const duration = json.routes[0]?.duration ? json.routes[0].duration / 4 : 20; // Speed up 4x for demo, or default 20s
+
+        const newDispatch = {
+          id: Date.now(),
+          serviceType,
+          startTime: Date.now(),
+          duration: duration,
+          startLocation: { lat: nearestService.lat, lng: nearestService.lng },
+          endLocation: { lat: selectedIncident.lat, lng: selectedIncident.lng },
+          currentPos: { lat: nearestService.lat, lng: nearestService.lng },
+          routePath: routePath, // Store path
+          timeLeft: duration,
+          isArrived: false
+        };
+
+        setActiveDispatches(prev => [...prev, newDispatch]);
+
+      } catch (err) {
+        console.error("Failed to fetch route for animation", err);
+        // Fallback to simple line if API fails
+        const newDispatch = {
+          id: Date.now(),
+          serviceType,
+          startTime: Date.now(),
+          duration: 20,
+          startLocation: { lat: nearestService.lat, lng: nearestService.lng },
+          endLocation: { lat: selectedIncident.lat, lng: selectedIncident.lng },
+          currentPos: { lat: nearestService.lat, lng: nearestService.lng },
+          timeLeft: 20,
+          isArrived: false
+        };
+        setActiveDispatches(prev => [...prev, newDispatch]);
+      }
+
+    } else {
+      alert(`No active ${department} units found nearby.`);
+    }
 
     try {
       const newAlerts = [...(selectedIncident.alertedDepartments || []), department];
@@ -256,8 +460,96 @@ const AdminDashboard = () => {
               >
                 <NavigationControl position="bottom-right" />
 
+                {/* CONTROL BUTTONS GROUP */}
+                <div className="mapboxgl-ctrl mapboxgl-ctrl-group" style={{ position: "absolute", top: 10, right: 10, display: "flex", flexDirection: "column", gap: "5px" }}>
+                  {/* Heatmap Toggle */}
+                  <button
+                    className="mapboxgl-ctrl-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowHeatmap(!showHeatmap);
+                    }}
+                    title="Toggle Traffic Heatmap"
+                    style={{ width: '29px', height: '29px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: showHeatmap ? '#fee2e2' : 'white' }}
+                  >
+                    <Flame size={16} color={showHeatmap ? '#dc2626' : '#333'} />
+                  </button>
+
+                  {/* Signals Toggle */}
+                  <button
+                    className="mapboxgl-ctrl-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowSignals(!showSignals);
+                    }}
+                    title="Toggle Traffic Signals"
+                    style={{ width: '29px', height: '29px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: showSignals ? '#dcfce7' : 'white' }}
+                  >
+                    <Zap size={16} color={showSignals ? '#15803d' : '#333'} />
+                  </button>
+
+                  {/* Services Toggle */}
+                  <button
+                    className="mapboxgl-ctrl-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowServices(!showServices);
+                    }}
+                    title="Toggle Essential Services"
+                    style={{ width: '29px', height: '29px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: showServices ? '#e0f2fe' : 'white' }}
+                  >
+                    <Info size={16} color={showServices ? '#0284c7' : '#333'} />
+                  </button>
+                </div>
+
+                {/* HEATMAP LAYER */}
+                {showHeatmap && (
+                  <Source type="geojson" data={{
+                    type: "FeatureCollection",
+                    features: signals.map(s => ({
+                      type: "Feature",
+                      properties: { opacity: s.congestion === "HIGH" ? 1 : s.congestion === "MEDIUM" ? 0.5 : 0.2 },
+                      geometry: { type: "Point", coordinates: [s.lng, s.lat] }
+                    }))
+                  }}>
+                    <Layer {...HEATMAP_LAYER} />
+                  </Source>
+                )}
+
+                {/* SERVICE MARKERS */}
+                {showServices && MOCK_SERVICES.map((s) => (
+                  <Marker
+                    key={s.id}
+                    longitude={s.lng}
+                    latitude={s.lat}
+                    anchor="bottom"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div
+                      style={{
+                        background: "white",
+                        padding: "4px",
+                        borderRadius: "50%",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: "24px",
+                        height: "24px"
+                      }}
+                      title={s.name}
+                    >
+                      {s.type === "hospital" && <Stethoscope size={14} color="#ef4444" />}
+                      {s.type === "police" && <Shield size={14} color="#3b82f6" />}
+                      {s.type === "fire_station" && <Flame size={14} color="#f97316" />}
+                      {s.type === "parking" && <CircleParking size={14} color="#f97316" />}
+                      {s.type === "fuel" && <Zap size={14} color="#22c55e" />}
+                    </div>
+                  </Marker>
+                ))}
+
                 {/* Signals Markers */}
-                {signals.map((s) => (
+                {showSignals && signals.map((s) => (
                   <Marker
                     key={s.id}
                     longitude={s.lng}
@@ -277,6 +569,19 @@ const AdminDashboard = () => {
                 ))}
 
                 {/* Incident Markers */}
+
+                {/* Active Dispatches Animation */}
+                {activeDispatches.map(dispatch => (
+                  <Marker
+                    key={dispatch.id}
+                    latitude={dispatch.currentPos.lat}
+                    longitude={dispatch.currentPos.lng}
+                    anchor="center"
+                  >
+                    <DispatchMarker dispatch={dispatch} />
+                  </Marker>
+                ))}
+
                 {liveIncidents.map((inc) => (
                   <Marker
                     key={inc._id}
