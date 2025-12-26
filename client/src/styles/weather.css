@@ -1,0 +1,91 @@
+/* WEATHER OVERLAY ANIMATIONS */
+
+/* RAIN ANIMATION */
+@keyframes rain {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  100% {
+    background-position: 10% 100%;
+  }
+}
+
+.rain-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.rain-layer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(transparent,
+      transparent 40px,
+      rgba(255, 255, 255, 0.4) 40px,
+      rgba(255, 255, 255, 0.4) 42px);
+  /* Rotate to simulate falling rain */
+  transform: rotate(15deg) scale(1.5);
+  opacity: 0.6;
+}
+
+.rain-layer:nth-child(1) {
+  animation: rain 0.8s linear infinite;
+  background: repeating-linear-gradient(transparent,
+      transparent 50px,
+      rgba(173, 216, 230, 0.6) 50px,
+      rgba(173, 216, 230, 0.6) 52px);
+}
+
+.rain-layer:nth-child(2) {
+  animation: rain 0.5s linear infinite;
+  background: repeating-linear-gradient(transparent,
+      transparent 30px,
+      rgba(255, 255, 255, 0.3) 30px,
+      rgba(255, 255, 255, 0.3) 31px);
+  opacity: 0.4;
+  top: -50%;
+}
+
+/* FOG ANIMATION */
+@keyframes fogMove {
+  0% {
+    transform: translateX(-10%);
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translateX(10%);
+    opacity: 0.4;
+  }
+}
+
+.weather-overlay-fog {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 150%;
+  /* Wider to allow movement */
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(200, 210, 220, 0.4) 30%,
+      rgba(220, 230, 240, 0.8) 60%,
+      rgba(255, 255, 255, 0.9) 100%);
+  animation: fogMove 20s ease-in-out infinite alternate;
+  mix-blend-mode: normal;
+  /* Ensure visibility */
+  filter: blur(8px);
+}

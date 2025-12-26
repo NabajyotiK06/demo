@@ -18,7 +18,15 @@ ChartJS.register(
     Legend
 );
 
+import { useContext } from "react";
+import { ThemeContext } from "../context/ThemeContext";
+
 const EnvironmentGraph = ({ history }) => {
+    const { theme } = useContext(ThemeContext);
+    const isDark = theme === "dark";
+    const textColor = isDark ? "#94a3b8" : "#6b7280";
+    const gridColor = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
+
     if (!history || history.length === 0) return null;
 
     const data = {
@@ -43,7 +51,15 @@ const EnvironmentGraph = ({ history }) => {
             legend: { display: false }
         },
         scales: {
-            y: { beginAtZero: true }
+            x: {
+                ticks: { color: textColor },
+                grid: { color: gridColor }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: { color: textColor },
+                grid: { color: gridColor }
+            }
         }
     };
 

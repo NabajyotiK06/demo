@@ -12,7 +12,7 @@ import {
     ArcElement,
     RadialLinearScale
 } from "chart.js";
-import { Bar, Pie, Doughnut, PolarArea } from "react-chartjs-2";
+import { Bar, Pie, Doughnut, PolarArea, Line } from "react-chartjs-2";
 import { TrendingUp, AlertCircle, Car, Activity, Wind, Zap } from "lucide-react";
 
 // Register ChartJS components
@@ -30,13 +30,13 @@ ChartJS.register(
 );
 
 const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
-    <div style={{ background: "white", padding: "16px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", display: "flex", gap: "12px", alignItems: "center" }}>
-        <div style={{ padding: "12px", borderRadius: "10px", background: `${color}20` }}>
+    <div className="stat-card">
+        <div className="stat-icon-container" style={{ background: `${color}20` }}>
             <Icon size={24} color={color} />
         </div>
         <div>
-            <div style={{ fontSize: "12px", color: "#6b7280", fontWeight: "600", textTransform: "uppercase" }}>{title}</div>
-            <div style={{ fontSize: "24px", fontWeight: "700", color: "#1f2937" }}>{value}</div>
+            <div className="stat-title">{title}</div>
+            <div className="stat-value">{value}</div>
             {subtext && <div style={{ fontSize: "12px", color: color }}>{subtext}</div>}
         </div>
     </div>
@@ -160,6 +160,72 @@ const AnalyticsPanel = ({ signals, incidents }) => {
         };
     }, [signals]);
 
+    // Live Congestion Trend State
+    const [congestionHistory, setCongestionHistory] = React.useState([]);
+
+    // Update Congestion History
+    React.useEffect(() => {
+        if (signals.length === 0) return;
+
+        // Calculate current system average congestion
+        // Map HIGH=100, MEDIUM=50, LOW=10
+        const scorePlugin = { HIGH: 100, MEDIUM: 50, LOW: 10 };
+        const total = signals.reduce((acc, s) => acc + (scorePlugin[s.congestion] || 0), 0);
+        const avg = Math.round(total / signals.length);
+
+        setCongestionHistory(prev => {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const newPoint = { time: timeStr, value: avg };
+            const newData = [...prev, newPoint];
+            if (newData.length > 20) newData.shift(); // Keep last 20 points
+            return newData;
+        });
+    }, [signals]);
+
+
+    // Incident Types (Pie)
+    const incidentTypeData = useMemo(() => {
+        const counts = {};
+        incidents.forEach(i => {
+            const type = i.type || "OTHER";
+            counts[type] = (counts[type] || 0) + 1;
+        });
+
+        // Return mostly mocked distribution if empty, for demo
+        if (Object.keys(counts).length === 0) {
+            return {
+                labels: ["Accident", "Road Work", "Vehicle Breakdown", "Closure"],
+                datasets: [{
+                    data: [35, 20, 30, 15],
+                    backgroundColor: ["#ef4444", "#f97316", "#eab308", "#6b7280"],
+                    borderWidth: 0
+                }]
+            };
+        }
+
+        return {
+            labels: Object.keys(counts),
+            datasets: [{
+                data: Object.values(counts),
+                backgroundColor: ["#ef4444", "#f97316", "#eab308", "#3b82f6", "#8b5cf6"],
+                borderWidth: 0
+            }]
+        };
+    }, [incidents]);
+
+    // Live Congestion Data object
+    const liveCongestionData = {
+        labels: congestionHistory.map(d => d.time),
+        datasets: [{
+            label: "System Congestion Level (0-100)",
+            data: congestionHistory.map(d => d.value),
+            borderColor: "#f59e0b",
+            backgroundColor: "rgba(245, 158, 11, 0.2)",
+            fill: true,
+            tension: 0.4
+        }]
+    };
 
     return (
         <div className="fade-in" style={{ padding: "20px", height: "100%", overflowY: "auto" }}>
@@ -188,6 +254,7 @@ const AnalyticsPanel = ({ signals, incidents }) => {
                     color="#a855f7"
                     subtext="Highest recorded pollution"
                 />
+
                 <StatCard
                     title="Critical Junctions"
                     value={criticalSignals}
@@ -211,7 +278,7 @@ const AnalyticsPanel = ({ signals, incidents }) => {
                 />
             </div>
 
-            {/* Row 1: Distributions */}
+            {/* Row 1: Traffic Overview */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px", marginBottom: "20px" }}>
                 {/* Congestion Chart */}
                 <div className="card">
@@ -228,15 +295,28 @@ const AnalyticsPanel = ({ signals, incidents }) => {
                         <Pie data={phaseData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }} />
                     </div>
                 </div>
+            </div>
 
-                {/* Incident Chart */}
+            {/* Row 2: Incident Overview */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px", marginBottom: "20px" }}>
+                {/* Incident Status Chart */}
                 <div className="card">
                     <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "16px", color: "#374151" }}>Incident Resolution</h3>
                     <div style={{ height: "200px", display: "flex", justifyContent: "center" }}>
                         <Doughnut data={incidentData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }} />
                     </div>
                 </div>
+
+                {/* Incident Types Chart */}
+                <div className="card">
+                    <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "16px", color: "#374151" }}>Incident Types</h3>
+                    <div style={{ height: "200px", display: "flex", justifyContent: "center" }}>
+                        <Pie data={incidentTypeData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }} />
+                    </div>
+                </div>
             </div>
+
+
 
             {/* Row 2: Heavy Charts */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "20px", marginBottom: "20px" }}>

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
-import "../styles/layout.css";
+import { User, Mail, Lock, Zap, ArrowRight, Eye, EyeOff, Shield } from "lucide-react";
+import "../styles/auth.css";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -21,15 +21,9 @@ const Signup = () => {
   };
 
   const handleSignup = async () => {
-    // Validation
     const { name, email, password } = form;
     if (!name || !email || !password) {
       alert("Please fill in all fields");
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      alert("Please enter a valid email address");
       return;
     }
     if (password.length < 8) {
@@ -47,54 +41,80 @@ const Signup = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card fade-in">
-        <h2 className="auth-title">Create Account</h2>
+    <div className="auth-split-layout">
+      {/* Left Panel - Branding */}
+      <div className="auth-left-panel">
+        <div className="auth-left-overlay"></div>
+        <div className="auth-brand-content">
+          <div className="auth-brand-logo">
+            <div style={{ background: '#3b82f6', padding: '8px', borderRadius: '8px', display: 'flex' }}>
+              <Zap size={24} fill="white" />
+            </div>
+            MoveWise
+          </div>
+        </div>
 
-        <div className="auth-form">
-          <div>
-            <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", color: "#374151" }}>Full Name</label>
-            <input
-              name="name"
-              placeholder="John Doe"
-              onChange={handleChange}
-              className="input-field"
-            />
+        <div className="auth-brand-quote">
+          <div className="quote-text">
+            "Empowering cities with data-driven traffic solutions."
+          </div>
+          <div className="quote-author">
+            — Join the Network
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Form */}
+      <div className="auth-right-panel">
+        <div className="auth-form-container animate-slide-in">
+          <div className="auth-header">
+            <h2 className="auth-title-large">Create Account</h2>
+            <p className="auth-subtitle">Get started with your free account.</p>
           </div>
 
-          <div>
-            <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", color: "#374151" }}>Email</label>
-            <input
-              name="email"
-              placeholder="john@example.com"
-              onChange={handleChange}
-              className="input-field"
-            />
+          <div className="auth-input-group">
+            <label className="auth-label">Full Name</label>
+            <div className="auth-input-wrapper">
+              <input
+                name="name"
+                placeholder="John Doe"
+                onChange={handleChange}
+                className="auth-input"
+              />
+              <User size={18} className="auth-icon" />
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", color: "#374151" }}>Password</label>
-            <div style={{ position: "relative" }}>
+          <div className="auth-input-group">
+            <label className="auth-label">Email Address</label>
+            <div className="auth-input-wrapper">
+              <input
+                name="email"
+                placeholder="john@example.com"
+                onChange={handleChange}
+                className="auth-input"
+              />
+              <Mail size={18} className="auth-icon" />
+            </div>
+          </div>
+
+          <div className="auth-input-group">
+            <label className="auth-label">Password</label>
+            <div className="auth-input-wrapper">
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Create a password"
                 onChange={handleChange}
-                className="input-field"
-                style={{ paddingRight: "40px" }}
+                className="auth-input"
               />
+              <Lock size={18} className="auth-icon" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#9ca3af"
+                  position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                  background: "none", border: "none", cursor: "pointer", color: "#94a3b8"
                 }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -102,40 +122,45 @@ const Signup = () => {
             </div>
           </div>
 
-          <div>
-            <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", color: "#374151" }}>Role</label>
-            <select
-              name="role"
-              onChange={handleChange}
-              className="input-field"
-            >
-              <option value="user">Public User</option>
-              <option value="admin">Administrator</option>
-            </select>
+          <div className="auth-input-group">
+            <label className="auth-label">Role</label>
+            <div className="auth-input-wrapper">
+              <select
+                name="role"
+                onChange={handleChange}
+                className="auth-input"
+                style={{ appearance: 'none' }}
+              >
+                <option value="user">Public User</option>
+                <option value="admin">Administrator</option>
+              </select>
+              <Shield size={18} className="auth-icon" />
+            </div>
           </div>
 
           {form.role === "admin" && (
-            <div className="fade-in">
-              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", color: "#374151" }}>
-                Admin Secret Key
-              </label>
-              <input
-                type="password"
-                name="adminSecretKey"
-                placeholder="Enter admin secret key"
-                onChange={handleChange}
-                className="input-field"
-              />
+            <div className="auth-input-group animate-slide-in">
+              <label className="auth-label">Admin Secret Key</label>
+              <div className="auth-input-wrapper">
+                <input
+                  type="password"
+                  name="adminSecretKey"
+                  placeholder="Enter secret key"
+                  onChange={handleChange}
+                  className="auth-input"
+                />
+                <Lock size={18} className="auth-icon" />
+              </div>
             </div>
           )}
 
-          <button onClick={handleSignup} className="btn btn-primary" style={{ marginTop: "16px", padding: "12px" }}>
-            Sign Up
+          <button onClick={handleSignup} className="auth-btn-primary">
+            create Account <ArrowRight size={18} />
           </button>
 
-          <p style={{ textAlign: "center", color: "#6b7280", marginTop: "16px" }}>
-            Already have an account? <Link to="/login" style={{ color: "#3b82f6", fontWeight: "600" }}>Login</Link>
-          </p>
+          <div className="auth-footer-text">
+            Already have an account? <Link to="/login" className="auth-link">Log In</Link>
+          </div>
         </div>
       </div>
     </div>

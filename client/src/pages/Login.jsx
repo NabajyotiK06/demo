@@ -2,8 +2,8 @@ import { useContext, useState } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, Menu, ArrowRight, Eye, EyeOff } from "lucide-react";
-import "../styles/layout.css";
+import { Mail, Lock, Zap, ArrowRight, Eye, EyeOff } from "lucide-react";
+import "../styles/auth.css";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,31 +11,29 @@ const Login = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [adminSecretKey, setAdminSecretKey] = useState("");
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = async () => {
     setError("");
 
-    // Validation
     if (!email || !password) {
       setError("Please fill in all fields");
       return;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+
+    if (isAdminLogin && !adminSecretKey) {
+      setError("Admin Secret Key is required");
       return;
     }
 
     try {
       const res = await axios.post("http://localhost:5000/api/auth/login", {
         email,
-        password
+        password,
+        adminSecretKey: isAdminLogin ? adminSecretKey : undefined
       });
 
       login(res.data);
@@ -44,85 +42,81 @@ const Login = () => {
       else navigate("/dashboard");
     } catch (err) {
       console.error("Login Error:", err);
-      setError(err.response?.data?.message || err.message || "Login failed");
+      setError(err.response?.data?.message || "Login failed");
     }
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card fade-in" style={{ padding: "48px", maxWidth: "420px" }}>
-
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <div style={{
-            width: "56px",
-            height: "56px",
-            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-            borderRadius: "16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 20px auto",
-            boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.3)"
-          }}>
-            <Menu size={32} color="white" />
+    <div className="auth-split-layout">
+      {/* Left Panel - Branding */}
+      <div className="auth-left-panel">
+        <div className="auth-left-overlay"></div>
+        <div className="auth-brand-content">
+          <div className="auth-brand-logo">
+            <div style={{ background: '#3b82f6', padding: '8px', borderRadius: '8px', display: 'flex' }}>
+              <Zap size={24} fill="white" />
+            </div>
+            MoveWise
           </div>
-          <h2 style={{ fontSize: "28px", fontWeight: "800", color: "#111827", marginBottom: "8px" }}>Welcome Back</h2>
-          <p style={{ color: "#6b7280" }}>Sign in to access your dashboard</p>
         </div>
 
-        <div className="auth-form">
+        <div className="auth-brand-quote">
+          <div className="quote-text">
+            "The future of traffic management is here. Join the revolution."
+          </div>
+          <div className="quote-author">
+            — MoveWise Intelligent Systems
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Form */}
+      <div className="auth-right-panel">
+        <div className="auth-form-container animate-slide-in">
+          <div className="auth-header">
+            <h2 className="auth-title-large">Welcome Back</h2>
+            <p className="auth-subtitle">Please sign in to your dashboard.</p>
+          </div>
+
           {error && (
             <div style={{
-              background: "#fee2e2",
-              color: "#b91c1c",
-              padding: "12px",
-              borderRadius: "8px",
-              fontSize: "14px",
-              textAlign: "center",
-              border: "1px solid #fecaca"
+              background: "#fee2e2", color: "#b91c1c", padding: "12px",
+              borderRadius: "8px", fontSize: "14px", marginBottom: "20px"
             }}>
               {error}
             </div>
           )}
 
-          <div>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", color: "#374151", fontSize: "14px" }}>Email Address</label>
-            <div style={{ position: "relative" }}>
-              <Mail size={18} color="#9ca3af" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+          <div className="auth-input-group">
+            <label className="auth-label">Email Address</label>
+            <div className="auth-input-wrapper">
               <input
-                placeholder="Enter your email"
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
-                style={{ paddingLeft: "40px" }}
+                className="auth-input"
               />
+              <Mail size={18} className="auth-icon" />
             </div>
           </div>
 
-          <div>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", color: "#374151", fontSize: "14px" }}>Password</label>
-            <div style={{ position: "relative" }}>
-              <Lock size={18} color="#9ca3af" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+          <div className="auth-input-group">
+            <label className="auth-label">Password</label>
+            <div className="auth-input-wrapper">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
-                style={{ paddingLeft: "40px", paddingRight: "40px" }}
+                className="auth-input"
               />
+              <Lock size={18} className="auth-icon" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#9ca3af"
+                  position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                  background: "none", border: "none", cursor: "pointer", color: "#94a3b8"
                 }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -130,27 +124,42 @@ const Login = () => {
             </div>
           </div>
 
+          <div style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+            <input
+              type="checkbox"
+              checked={isAdminLogin}
+              onChange={(e) => setIsAdminLogin(e.target.checked)}
+              id="adminToggle"
+              style={{ width: "16px", height: "16px", accentColor: "#3b82f6" }}
+            />
+            <label htmlFor="adminToggle" style={{ color: "#334155", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>
+              Login as Administrator
+            </label>
+          </div>
 
+          {isAdminLogin && (
+            <div className="auth-input-group animate-slide-in">
+              <label className="auth-label">Admin Secret Key</label>
+              <div className="auth-input-wrapper">
+                <input
+                  type="password"
+                  placeholder="Enter system key"
+                  value={adminSecretKey}
+                  onChange={(e) => setAdminSecretKey(e.target.value)}
+                  className="auth-input"
+                />
+                <Lock size={18} className="auth-icon" />
+              </div>
+            </div>
+          )}
 
-          <button
-            onClick={handleLogin}
-            className="btn btn-primary"
-            style={{
-              marginTop: "8px",
-              padding: "14px",
-              fontSize: "16px",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "8px"
-            }}
-          >
+          <button onClick={handleLogin} className="auth-btn-primary">
             Sign In <ArrowRight size={18} />
           </button>
 
-          <p style={{ textAlign: "center", color: "#6b7280", marginTop: "24px", fontSize: "14px" }}>
-            Don’t have an account? <Link to="/signup" style={{ color: "#3b82f6", fontWeight: "600" }}>Create account</Link>
-          </p>
+          <div className="auth-footer-text">
+            Don’t have an account? <Link to="/signup" className="auth-link">Create Account</Link>
+          </div>
         </div>
       </div>
     </div>

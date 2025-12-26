@@ -5,13 +5,14 @@ import MapView from "../components/MapView";
 import IncidentForm from "../components/IncidentForm";
 import { AuthContext } from "../context/AuthContext";
 import "../styles/layout.css";
+import WeatherOverlay from "../components/WeatherOverlay";
 
 const IncidentReport = () => {
   const { user } = useContext(AuthContext);
   const [signals, setSignals] = useState([]); // Needed for MapView to render correctly
   const [selectedSignalId, setSelectedSignalId] = useState(null); // Needed for MapView props
   const [location, setLocation] = useState(null);
-  
+
   // We can keep the heatmap toggle or default it. Let's keep it simple for now, 
   // maybe just default to showing it so the map isn't empty.
   const [showHeatmap, setShowHeatmap] = useState(true);
@@ -25,7 +26,7 @@ const IncidentReport = () => {
 
         <div className="page-body">
           <div className="dashboard-map-container">
-             <div className="heatmap-toggle fade-in">
+            <div className="heatmap-toggle fade-in">
               <label className="heatmap-label">
                 <input
                   type="checkbox"
@@ -44,6 +45,8 @@ const IncidentReport = () => {
               location={location}
               showHeatmap={showHeatmap}
             />
+            {/* GLOBAL WEATHER OVERLAY */}
+            <WeatherOverlay />
           </div>
 
           <div className="dashboard-sidebar">

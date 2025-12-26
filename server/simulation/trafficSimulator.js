@@ -9,6 +9,8 @@ const getRandomInt = (min, max) =>
 
 // In-memory state for traffic signals
 let signalsState = [];
+let currentWeather = "CLEAR"; // Default Weather
+
 
 const getCongestionLevel = (vehicles) => {
   if (vehicles < 60) return "LOW";
@@ -65,7 +67,29 @@ const simulateTraffic = (io) => {
         io.emit("trafficUpdate", signalsState);
       }
     });
+
+    // Admin manually updates Weather
+    socket.on("adminWeatherUpdate", (weather) => {
+      currentWeather = weather;
+      io.emit("weatherUpdate", currentWeather); // Broadcast to all
+    });
+
+    // 🚑 Emergency Green Wave
+    socket.on("emergencyRouteActive", ({ signalIds, duration }) => {
+      console.log(`🚑 Green Wave Activated for ${signalIds.length} signals`);
+      signalsState.forEach(s => {
+        if (signalIds.includes(s.id)) {
+          s.currentLight = "GREEN";
+          s.timer = duration || 45;
+          s.phaseDuration = duration || 45;
+          s.congestion = "LOW"; // Clear the way logic
+          s.vehicles = Math.max(5, Math.floor(s.vehicles * 0.3)); // Clear 70% of traffic
+        }
+      });
+      io.emit("trafficUpdate", signalsState);
+    });
   });
+
 
   // Simulation Loop (runs every 1 second)
   setInterval(() => {
@@ -89,8 +113,14 @@ const simulateTraffic = (io) => {
       const congestion = getCongestionLevel(vehicles);
 
       // Calculate derived metrics
-      // Speed: Inversely proportional to vehicles. Base 60km/h. Min 5km/h.
-      let avgSpeed = Math.max(2, 70 - (vehicles * 0.45) + getRandomInt(-10, 10));
+      // Calculate Speed: Inversely proportional to vehicles. Base 60km/h. Min 2km/h.
+      let baseSpeed = 70 - (vehicles * 0.45) + getRandomInt(-10, 10);
+
+      // Weather Impact
+      if (currentWeather === "RAIN") baseSpeed *= 0.8;
+      if (currentWeather === "FOG") baseSpeed *= 0.6;
+
+      let avgSpeed = Math.max(2, baseSpeed);
       avgSpeed = Math.round(avgSpeed * 10) / 10;
 
       // AQI: Map 0-200 vehicles to 70-190 range
@@ -133,6 +163,8 @@ const simulateTraffic = (io) => {
 
     // Emit Real-time Update
     io.emit("trafficUpdate", signalsState);
+    io.emit("weatherUpdate", currentWeather); // Ensure new clients get this
+
 
   }, 1000);
 }

@@ -47,6 +47,14 @@ router.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
+    // Check for admin secret key if role is admin
+    if (user.role === 'admin') {
+      const { adminSecretKey } = req.body;
+      if (adminSecretKey !== process.env.ADMIN_SECRET_KEY) {
+        return res.status(403).json({ message: "Invalid admin secret key" });
+      }
+    }
+
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,

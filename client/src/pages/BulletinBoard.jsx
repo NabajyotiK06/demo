@@ -111,22 +111,13 @@ const BulletinBoard = () => {
 
                     <div style={{ display: "grid", gap: "20px", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
                         {bulletins.map((item) => (
-                            <div key={item._id} className="fade-in" style={{
-                                background: "white",
-                                padding: "20px",
-                                borderRadius: "12px", // Increased border radius
-                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", // Softer shadow
-                                border: "1px solid #e5e7eb", // Subtle border
-                                display: "flex",
-                                flexDirection: "column",
-                                position: "relative"
-                            }}>
+                            <div key={item._id} className="bulletin-card fade-in">
                                 <div style={{ marginBottom: "12px" }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <h3 style={{ fontSize: "1.25rem", fontWeight: "600", color: "#111827", marginBottom: "8px" }}>{item.title}</h3>
+                                        <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "8px" }}>{item.title}</h3>
                                         {user.role === "admin" && (
                                             <div style={{ display: "flex", gap: "8px" }}>
-                                                <button onClick={() => openModal(item)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280" }}>
+                                                <button onClick={() => openModal(item)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)" }}>
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button onClick={() => handleDelete(item._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }}>
@@ -135,18 +126,18 @@ const BulletinBoard = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#6b7280" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
                                         <Calendar size={14} />
                                         <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                                     </div>
                                 </div>
 
-                                <p style={{ color: "#374151", lineHeight: "1.6", whiteSpace: "pre-wrap", flex: 1 }}>
+                                <p style={{ lineHeight: "1.6", whiteSpace: "pre-wrap", flex: 1 }}>
                                     {item.content}
                                 </p>
 
                                 {item.expiresAt && (
-                                    <div style={{ marginTop: "12px", fontSize: "0.75rem", color: "#9ca3af", fontStyle: "italic" }}>
+                                    <div style={{ marginTop: "12px", fontSize: "0.75rem", color: "var(--text-secondary)", fontStyle: "italic" }}>
                                         Expires: {new Date(item.expiresAt).toLocaleString()}
                                     </div>
                                 )}
@@ -164,15 +155,8 @@ const BulletinBoard = () => {
 
             {/* Modal */}
             {isModalOpen && (
-                <div style={{
-                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                    background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center",
-                    zIndex: 1000
-                }}>
-                    <div className="fade-in" style={{
-                        background: "white", width: "100%", maxWidth: "500px", padding: "24px", borderRadius: "12px",
-                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
-                    }}>
+                <div className="bulletin-overlay">
+                    <div className="bulletin-modal fade-in">
                         <h3 style={{ marginTop: 0, marginBottom: "20px", fontSize: "1.5rem" }}>
                             {editingId ? "Edit Bulletin" : "New Bulletin"}
                         </h3>
@@ -196,9 +180,9 @@ const BulletinBoard = () => {
                                     className="input-field"
                                     value={expiresAt}
                                     onChange={(e) => setExpiresAt(e.target.value)}
-                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db" }}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid var(--border-color)" }}
                                 />
-                                <small style={{ color: "#6b7280" }}>Post will be automatically deleted after this time.</small>
+                                <small style={{ color: "var(--text-secondary)" }}>Post will be automatically deleted after this time.</small>
                             </div>
 
                             <div style={{ marginBottom: "24px" }}>
@@ -214,7 +198,7 @@ const BulletinBoard = () => {
                             </div>
 
                             <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-                                <button type="button" onClick={closeModal} className="btn" style={{ background: "#f3f4f6", color: "#374151" }}>
+                                <button type="button" onClick={closeModal} className="btn" style={{ background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border-color)" }}>
                                     Cancel
                                 </button>
                                 <button type="submit" className="btn btn-primary">

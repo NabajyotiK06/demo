@@ -1,0 +1,610 @@
+/* Themes Definition */
+
+/* LIGHT THEME (Default) */
+.theme-light {
+    --bg-primary: #f3f4f6;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #111827;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-inverse: #f3f4f6;
+    --border-color: #e5e7eb;
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* DARK THEME - DEEP INTEGRATION */
+.theme-dark {
+    --bg-primary: #020617;
+    /* Very Dark Slate */
+    --bg-secondary: #1e293b;
+    /* Slate 800 */
+    --bg-sidebar: #0f172a;
+    /* Slate 900 */
+    --text-primary: #f8fafc;
+    /* Slate 50 */
+    --text-secondary: #94a3b8;
+    /* Slate 400 */
+    --text-inverse: #f8fafc;
+    --border-color: #334155;
+    /* Slate 700 */
+    --primary-color: #38bdf8;
+    /* Sky 400 */
+    --primary-hover: #0ea5e9;
+    /* Sky 500 */
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+/* Global Transition */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ----- DEEP INTEGRATION OVERRIDES ----- */
+/* These rules use !important to override layout.css hardcoded values */
+
+/* Main Layout Backgrounds */
+.theme-dark .app-layout,
+.theme-dark .main-content,
+.theme-dark .page-body {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Sidebars & Panels */
+.theme-dark .sidebar,
+.theme-dark .dashboard-sidebar {
+    background-color: var(--bg-sidebar) !important;
+    border-right: 1px solid var(--border-color) !important;
+    border-left: none !important;
+    color: var(--text-primary) !important;
+}
+
+/* Topbar */
+.theme-dark .topbar {
+    background-color: var(--bg-sidebar) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Cards & Containers */
+.theme-dark .card,
+.theme-dark .auth-card,
+.theme-dark .route-card,
+.theme-dark .panel-container,
+.theme-dark .heatmap-toggle {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--card-shadow) !important;
+}
+
+/* Inputs & Forms */
+.theme-dark .input-field,
+.theme-dark input {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.theme-dark .input-field:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+}
+
+/* Interactive Elements (Hover States) */
+.theme-dark .route-card:hover,
+.theme-dark .step-item:hover,
+.theme-dark .nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.theme-dark .route-card.active,
+.theme-dark .nav-item.active {
+    background-color: rgba(56, 189, 248, 0.1) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
+
+/* Text & Headings */
+.theme-dark h1,
+.theme-dark h2,
+.theme-dark h3,
+.theme-dark h4,
+.theme-dark h5,
+.theme-dark h6 {
+    color: var(--text-primary) !important;
+}
+
+.theme-dark p,
+.theme-dark span,
+.theme-dark div {
+    color: inherit;
+}
+
+.theme-dark .text-muted,
+.theme-dark .step-icon {
+    color: var(--text-secondary) !important;
+}
+
+/* Buttons */
+.theme-dark .btn-primary {
+    background-color: var(--primary-color) !important;
+    color: #0f172a !important;
+    /* Dark text on bright button */
+}
+
+.theme-dark .btn-primary:hover {
+    background-color: var(--primary-hover) !important;
+}
+
+/* Scrollbars for Chrome/Edge */
+.theme-dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.theme-dark ::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+.theme-dark ::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.theme-dark ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* Bulletin Board Overrides */
+.bulletin-card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.theme-dark .bulletin-card {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: var(--card-shadow) !important;
+    color: var(--text-primary) !important;
+}
+
+.bulletin-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.bulletin-modal {
+    background: white;
+    width: 100%;
+    max-width: 500px;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.theme-dark .bulletin-modal {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color);
+}
+
+/* Incident History Cards */
+.theme-dark .incident-card {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.theme-dark .incident-type {
+    color: var(--text-primary) !important;
+}
+
+.theme-dark .incident-desc {
+    color: var(--text-secondary) !important;
+}
+
+.theme-dark .incident-time {
+    color: var(--text-secondary) !important;
+}
+
+/* Status Badge - Resolved */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    height: fit-content;
+}
+
+.status-badge.resolved {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.theme-dark .status-badge.resolved {
+    background-color: rgba(16, 185, 129, 0.2) !important;
+    color: #34d399 !important;
+    /* Emerald 400 */
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Analytics Stat Cards */
+.stat-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid transparent;
+}
+
+.stat-icon-container {
+    padding: 12px;
+    border-radius: 10px;
+}
+
+.stat-title {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+/* Dark Mode Overrides for Analytics */
+.theme-dark .stat-card {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--card-shadow) !important;
+}
+
+.theme-dark .stat-title {
+    color: var(--text-secondary) !important;
+}
+
+.theme-dark .stat-value {
+    color: var(--text-primary) !important;
+}
+
+/* Dashboard Tabs */
+.dashboard-tabs {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.dashboard-tab-btn {
+    flex: 1 0 auto;
+    border: 1px solid #e5e7eb;
+    background: white;
+    padding: 8px 12px;
+    color: #4b5563;
+    transition: all 0.2s ease;
+}
+
+.dashboard-tab-btn.active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+}
+
+.theme-dark .dashboard-tabs {
+    background-color: var(--bg-secondary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+.theme-dark .dashboard-tab-btn {
+    background-color: var(--bg-primary);
+    /* Slightly darker than card */
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.theme-dark .dashboard-tab-btn:hover {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.theme-dark .dashboard-tab-btn.active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+}
+
+/* System Status Badge (Topbar) */
+.system-status-badge {
+    background-color: #ecfdf5;
+    /* Light green */
+    color: #059669;
+    /* Green 600 */
+    padding: 6px 12px;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-dark .system-status-badge {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    /* Emerald 400 */
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #10b981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* Route Planner Styles */
+.trip-details-card {
+    padding: 16px;
+    margin-bottom: 24px;
+    background: #f8fafc;
+}
+
+.theme-dark .trip-details-card {
+    background: var(--bg-secondary) !important;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.card-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.theme-dark .card-label {
+    color: var(--text-secondary);
+}
+
+.reset-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.detail-item {
+    margin-bottom: 12px;
+}
+
+.detail-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.theme-dark .detail-label {
+    color: var(--text-secondary);
+}
+
+.detail-value {
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.detail-value.selected {
+    color: #10b981;
+}
+
+.detail-value.selected-dest {
+    color: #ef4444;
+    /* Or keep red marker style */
+}
+
+/* AI Analysis Card */
+.ai-analysis-card {
+    margin-bottom: 24px;
+    border-left: 4px solid #8b5cf6;
+    background: #f3e8ff;
+    padding: 12px;
+}
+
+.ai-title {
+    font-weight: 700;
+    color: #6b21a8;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.ai-text {
+    font-size: 13px;
+    color: #581c87;
+    line-height: 1.4;
+}
+
+.theme-dark .ai-analysis-card {
+    background: rgba(139, 92, 246, 0.15);
+    /* Purple tint */
+    border-left-color: #a78bfa;
+    /* Lighter purple border */
+}
+
+.theme-dark .ai-title {
+    color: #c084fc;
+    /* Bright purple text */
+}
+
+.theme-dark .ai-text {
+    color: #e9d5ff;
+    /* Very light purple text */
+}
+
+/* Route Cards */
+.route-card {
+    cursor: pointer;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.route-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.route-card.active {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+}
+
+.theme-dark .route-card {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.theme-dark .route-card:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(56, 189, 248, 0.05);
+}
+
+.theme-dark .route-card.active {
+    background-color: rgba(56, 189, 248, 0.1);
+    border-color: var(--primary-color);
+}
+
+.route-badge {
+    position: absolute;
+    top: -8px;
+    right: 10px;
+    background: #8b5cf6;
+    color: white;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.route-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.route-name {
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.theme-dark .route-name {
+    color: var(--text-primary);
+}
+
+.route-duration {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.theme-dark .route-duration {
+    color: var(--text-secondary);
+}
+
+.route-distance {
+    font-size: 14px;
+    color: #4b5563;
+}
+
+.theme-dark .route-distance {
+    color: var(--text-secondary);
+}
+
+.route-warning {
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Steps */
+.step-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.theme-dark .step-item {
+    border-bottom-color: var(--border-color);
+}
+
+.step-icon-container {
+    min-width: 32px;
+    display: flex;
+    justify-content: center;
+}
+
+.step-instruction {
+    font-weight: 500;
+    color: #374151;
+}
+
+.theme-dark .step-instruction {
+    color: var(--text-primary);
+}
+
+.step-distance {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+.theme-dark .step-distance {
+    color: var(--text-secondary);
+}

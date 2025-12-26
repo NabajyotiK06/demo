@@ -46,7 +46,7 @@ const AnalyticsPage = () => {
                 <Topbar showSearch={false} />
 
                 <div className="page-body">
-                    <div className="dashboard-map-container" style={{ padding: "16px", background: "#f3f4f6", overflowY: "auto" }}>
+                    <div className="dashboard-map-container" style={{ padding: "16px", overflowY: "auto" }}>
                         <h2 className="section-title">System Analytics</h2>
                         <AnalyticsPanel signals={signals} incidents={incidents} />
                     </div>

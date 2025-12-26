@@ -10,6 +10,13 @@ const SignalInfoPanel = ({ signal, onViewFeed }) => {
   const [history, setHistory] = useState([]);
   const { user } = useContext(AuthContext);
   const socket = useSocket();
+  const [weather, setWeather] = useState("CLEAR"); // Add weather state
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("weatherUpdate", (data) => setWeather(data));
+    return () => socket.off("weatherUpdate");
+  }, [socket]);
 
   useEffect(() => {
     if (!signal) return;
@@ -76,7 +83,15 @@ const SignalInfoPanel = ({ signal, onViewFeed }) => {
         <InfoItem icon={Car} label="Total Vehicles" value={signal.vehicles} color="#3b82f6" />
         <InfoItem icon={Activity} label="Congestion Level" value={signal.congestion} color={signal.congestion === "HIGH" ? "#ef4444" : "#10b981"} />
         <InfoItem icon={Wind} label="Air Quality Index" value={signal.aqi} color="#8b5cf6" />
-        <InfoItem icon={Gauge} label="Avg Speed" value={`${signal.avgSpeed} km/h`} color="#f59e0b" />
+
+        <div style={{ position: "relative" }}>
+          <InfoItem icon={Gauge} label="Avg Speed" value={`${signal.avgSpeed} km/h`} color="#f59e0b" />
+          {weather !== "CLEAR" && (
+            <div style={{ position: "absolute", top: 12, right: 12, fontSize: "10px", background: weather === "RAIN" ? "#dbeafe" : "#f3f4f6", color: weather === "RAIN" ? "#1e40af" : "#374151", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
+              {weather === "RAIN" ? "Rain: -20%" : "Fog: -40%"}
+            </div>
+          )}
+        </div>
       </div>
 
       {user?.role === "admin" && (

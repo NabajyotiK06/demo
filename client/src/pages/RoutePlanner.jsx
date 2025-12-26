@@ -1,4 +1,5 @@
 import { useContext, useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
   ArrowLeft,
@@ -26,13 +27,15 @@ import Map, { Marker, Source, Layer, NavigationControl, GeolocateControl, Popup 
 import mapboxgl from "mapbox-gl";
 import { LocationContext } from "../context/LocationContext";
 import { AuthContext } from "../context/AuthContext";
-import io from "socket.io-client";
+// import io from "socket.io-client"; // Removed direct import
+import { useSocket } from "../context/SocketContext";
 import axios from "axios";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "../styles/layout.css";
+import WeatherOverlay from "../components/WeatherOverlay";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-const socket = io("http://localhost:5000");
+// const socket = io("http://localhost:5000"); // Removed direct instantiation
 
 // 3D Building Layer Style
 const BUILDING_LAYER_STYLE = {
@@ -98,6 +101,7 @@ const RoutePlanner = () => {
   const [vehicleIndex, setVehicleIndex] = useState(0);
   const [aiReasoning, setAiReasoning] = useState(null);
   const [incidents, setIncidents] = useState([]);
+  const [searchParams] = useSearchParams();
 
   // Advanced Map Features State
   const [is3DMode, setIs3DMode] = useState(false);
@@ -112,16 +116,48 @@ const RoutePlanner = () => {
   const [hoveredService, setHoveredService] = useState(null);
 
   const mapRef = useRef(null);
+  const socket = useSocket(); // Use shared socket
 
   // Fetch Signals for Heatmap/Network
   useEffect(() => {
+    if (!socket) return;
+
     socket.on("trafficUpdate", (data) => {
       setSignals(data);
     });
     return () => {
       socket.off("trafficUpdate");
     };
-  }, []);
+  }, [socket]);
+
+  // Parse Query Params for Auto-Routing
+  useEffect(() => {
+    const startParam = searchParams.get("start");
+    const endParam = searchParams.get("end");
+
+    if (startParam && endParam) {
+      const [slat, slng] = startParam.split(",").map(Number);
+      const [elat, elng] = endParam.split(",").map(Number);
+
+      if (!isNaN(slat) && !isNaN(slng) && !isNaN(elat) && !isNaN(elng)) {
+        setStart({ lat: slat, lng: slng });
+        setEnd({ lat: elat, lng: elng });
+        // Initial flyTo
+        setViewState(prev => ({ ...prev, latitude: slat, longitude: slng, zoom: 13 }));
+      }
+    }
+  }, [searchParams]);
+
+  // Trigger Fetch when Start/End are set externally (and no routes yet)
+  useEffect(() => {
+    if (start && end && routes.length === 0) {
+      // Small delay to ensure state is ready
+      const timer = setTimeout(() => {
+        fetchRoutes("optimal");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [start, end]);
 
   // Update map view when searchedLocation changes
   useEffect(() => {
@@ -283,7 +319,7 @@ const RoutePlanner = () => {
       socket.off("incidentReported");
       socket.off("incidentUpdated");
     };
-  }, [routes, selectedRouteIndex]);
+  }, [routes, selectedRouteIndex, socket]);
 
   const checkRouteImpact = (incident) => {
     // Simple check: is incident close to any point on the selected route?
@@ -499,6 +535,9 @@ const RoutePlanner = () => {
               onClick={handleMapClick}
               terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
             >
+              {/* GLOBAL WEATHER OVERLAY */}
+              <WeatherOverlay />
+
               <NavigationControl position="bottom-right" />
               <GeolocateControl position="bottom-right" />
 
@@ -721,9 +760,9 @@ const RoutePlanner = () => {
               <div className="panel-container">
                 <h2 className="section-title">Route Planner</h2>
 
-                <div className="card" style={{ padding: "16px", marginBottom: "24px", background: "#f8fafc" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                    <div style={{ fontSize: "12px", color: "#6b7280", fontWeight: "600" }}>TRIP DETAILS</div>
+                <div className="card trip-details-card">
+                  <div className="card-header">
+                    <div className="card-label">TRIP DETAILS</div>
                     {(start || end) && (
                       <button
                         onClick={() => {
@@ -731,30 +770,22 @@ const RoutePlanner = () => {
                           setEnd(null);
                           setRoutes([]);
                         }}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#ef4444",
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          cursor: "pointer",
-                          padding: 0
-                        }}
+                        className="reset-btn"
                       >
                         Reset Map
                       </button>
                     )}
                   </div>
 
-                  <div style={{ marginBottom: "12px" }}>
-                    <div style={{ fontSize: "12px", color: "#6b7280", fontWeight: "600", marginBottom: "4px" }}>START POINT</div>
-                    <div style={{ color: start ? "#10b981" : "#9ca3af", fontWeight: "500" }}>
+                  <div className="detail-item">
+                    <div className="detail-label">START POINT</div>
+                    <div className={`detail-value ${start ? "selected" : ""}`}>
                       {start ? "✅ Point Selected" : "Click on map to select"}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "12px", color: "#6b7280", fontWeight: "600", marginBottom: "4px" }}>DESTINATION</div>
-                    <div style={{ color: end ? "📍 Point Selected" : "#9ca3af", fontWeight: "500" }}>
+                    <div className="detail-label">DESTINATION</div>
+                    <div className={`detail-value ${end ? "selected-dest" : ""}`}>
                       {end ? "📍 Point Selected" : "Click on map to select"}
                     </div>
                   </div>
@@ -774,12 +805,12 @@ const RoutePlanner = () => {
                   <>
                     {/* AI REASONING BOX */}
                     {aiReasoning && (
-                      <div className="card fade-in" style={{ marginBottom: "24px", borderLeft: "4px solid #8b5cf6", background: "#f3e8ff", padding: "12px" }}>
+                      <div className="card ai-analysis-card fade-in">
                         <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
                           <div style={{ fontSize: "18px" }}>🤖</div>
                           <div>
-                            <div style={{ fontWeight: "700", color: "#6b21a8", fontSize: "14px", marginBottom: "4px" }}>AI Route Analysis</div>
-                            <div style={{ fontSize: "13px", color: "#581c87", lineHeight: "1.4" }}>
+                            <div className="ai-title">AI Route Analysis</div>
+                            <div className="ai-text">
                               {aiReasoning}
                             </div>
                           </div>
@@ -797,29 +828,19 @@ const RoutePlanner = () => {
                           style={{ position: "relative" }}
                         >
                           {index === 0 && (
-                            <span style={{
-                              position: "absolute",
-                              top: "-8px",
-                              right: "10px",
-                              background: routeType === "shortest" ? "#10b981" : "#8b5cf6",
-                              color: "white",
-                              fontSize: "10px",
-                              padding: "2px 8px",
-                              borderRadius: "10px",
-                              fontWeight: "bold"
-                            }}>
+                            <span className="route-badge">
                               {routeType === "shortest" ? "FASTEST" : "RECOMMENDED"}
                             </span>
                           )}
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                            <span style={{ fontWeight: "700", color: "#1f2937" }}>Route {index + 1}</span>
-                            <span style={{ color: "#6b7280", fontSize: "14px" }}>{r.duration} min</span>
+                          <div className="route-header">
+                            <span className="route-name">Route {index + 1}</span>
+                            <span className="route-duration">{r.duration} min</span>
                           </div>
-                          <div style={{ fontSize: "14px", color: "#4b5563" }}>
+                          <div className="route-distance">
                             Distance: {r.distance} km
                           </div>
                           {r.congestionPenalty > 0 && (
-                            <div style={{ fontSize: "11px", color: "#ef4444", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <div className="route-warning">
                               ⚠️ High Traffic Detected
                             </div>
                           )}
@@ -844,12 +865,12 @@ const RoutePlanner = () => {
 
                         return (
                           <div key={i} className="step-item">
-                            <div style={{ minWidth: "32px", display: "flex", justifyContent: "center" }}>
+                            <div className="step-icon-container">
                               {getManeuverIcon(step.maneuver.type, step.maneuver.modifier)}
                             </div>
                             <div>
-                              <div style={{ fontWeight: "500", color: "#374151" }}>{step.maneuver.instruction}</div>
-                              <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: "2px" }}>
+                              <div className="step-instruction">{step.maneuver.instruction}</div>
+                              <div className="step-distance">
                                 {Math.round(step.distance)} meters
                               </div>
                             </div>

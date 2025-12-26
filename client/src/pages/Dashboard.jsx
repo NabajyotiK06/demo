@@ -3,10 +3,14 @@ import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import MapView from "../components/MapView";
 import SignalInfoPanel from "../components/SignalInfoPanel";
-import { VideoOff } from "lucide-react";
+import { VideoOff, Cloud, CloudRain, CloudFog, Briefcase, Home, MapPin, Navigation, Edit2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 import { AuthContext } from "../context/AuthContext";
 import "../styles/layout.css";
+import WeatherOverlay from "../components/WeatherOverlay";
+import { useSocket } from "../context/SocketContext";
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
@@ -16,6 +20,26 @@ const Dashboard = () => {
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showSignals, setShowSignals] = useState(true);
   const [showFeed, setShowFeed] = useState(false);
+
+  const navigate = useNavigate();
+
+  /* Removed Commute State and Handlers */
+  const [weather, setWeather] = useState("CLEAR"); // Local weather state
+
+  const socket = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen for global weather updates
+    socket.on("weatherUpdate", (data) => {
+      setWeather(data);
+    });
+
+    return () => {
+      socket.off("weatherUpdate");
+    };
+  }, [socket]);
 
   useEffect(() => {
     if (!selectedSignalId && signals.length) {
@@ -64,6 +88,9 @@ const Dashboard = () => {
               showHeatmap={showHeatmap}
               showSignals={showSignals}
             />
+
+            {/* GLOBAL WEATHER OVERLAY */}
+            <WeatherOverlay />
 
             {/* Live Feed Modal Overlay - Positioned over map */}
             {showFeed && selectedSignal && (
@@ -149,6 +176,29 @@ const Dashboard = () => {
 
           <div className="dashboard-sidebar">
             <div className="dashboard-scroll-area">
+
+              {/* WEATHER WIDGET (User View) */}
+              <div className="card fade-in" style={{ marginBottom: "16px", background: weather === "RAIN" ? "linear-gradient(to right, #374151, #4b5563)" : weather === "FOG" ? "linear-gradient(to right, #6b7280, #9ca3af)" : "linear-gradient(to right, #60a5fa, #3b82f6)", color: "white", border: "none" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: "0.9rem", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <MapPin size={14} color="white" /> Kolkata, IN
+                    </div>
+                    <div style={{ fontSize: "2rem", fontWeight: "bold", margin: "4px 0" }}>
+                      {weather === "CLEAR" ? "28°" : weather === "RAIN" ? "22°" : "19°"}
+                    </div>
+                    <div style={{ fontSize: "0.85rem", opacity: 0.9 }}>
+                      {weather === "CLEAR" ? "Mostly Sunny" : weather === "RAIN" ? "Light Rain" : "Foggy"}
+                    </div>
+                  </div>
+                  {weather === "CLEAR" && <Cloud size={48} color="white" style={{ opacity: 0.8 }} />}
+                  {weather === "RAIN" && <CloudRain size={48} color="white" style={{ opacity: 0.8 }} />}
+                  {weather === "FOG" && <CloudFog size={48} color="white" style={{ opacity: 0.8 }} />}
+                </div>
+              </div>
+
+
+
               <SignalInfoPanel
                 signal={selectedSignal}
                 onViewFeed={() => setShowFeed(true)}

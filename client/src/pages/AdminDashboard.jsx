@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useRef } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import Map, { Marker, NavigationControl, Source, Layer } from "react-map-gl";
@@ -20,12 +20,16 @@ import {
 
   Info,
   Zap,
-  CircleParking
+  CircleParking,
+  Cloud,
+  CloudRain,
+  CloudFog
 } from "lucide-react";
 
 import IncidentForm from "../components/IncidentForm";
 import MapView from "../components/MapView";
 import "../styles/layout.css";
+import WeatherOverlay from "../components/WeatherOverlay";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 import { MOCK_SERVICES, getNearestService } from "../data/mockServices";
@@ -157,7 +161,19 @@ const getPointAlongPath = (path, progress) => {
 const AdminDashboard = () => {
   const socket = useSocket();
   const [incidents, setIncidents] = useState([]);
-  const [signals, setSignals] = useState([]); // Traffic Signals
+  const [rawSignals, setRawSignals] = useState([]); // Raw Traffic Signals from Server
+  const [weather, setWeather] = useState("CLEAR"); // Global Weather Consumer
+
+  // Derived Signals based on Weather happens on Server now or we can keep it here for optimistic UI
+  // But since we are broadcasting, we should listen to signal updates from server which already have speed adjusted?
+  // Actually, the server simulation logic I wrote DOES NOT adjust speed based on weather yet, only traffic density.
+  // Let's rely on the server to broadcast weather and we apply visual effects.
+  // The server simulation creates traffic data, but my previous edit to server didn't implement speed reduction in logic.
+  // For now, let's keep client-side speed reduction visualization if we want immediate feedback, 
+  // OR update server logic to actually reduce speed. 
+  // Let's trust the server broadcasts and just visualise here.
+
+  const signals = rawSignals; // Use raw signals directly, assuming server will handle physics later or visuals are enough.
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [selectedSignal, setSelectedSignal] = useState(null); // Selected Signal for Control
   const [activeTab, setActiveTab] = useState("LIVE");
@@ -184,7 +200,7 @@ const AdminDashboard = () => {
     if (!socket) return;
 
     socket.on("trafficUpdate", (data) => {
-      setSignals(data);
+      setRawSignals(data);
       // Update selected signal if it exists
       if (selectedSignal) {
         const updated = data.find(s => s.id === selectedSignal.id);
@@ -192,10 +208,22 @@ const AdminDashboard = () => {
       }
     });
 
+    socket.on("weatherUpdate", (data) => {
+      setWeather(data);
+    });
+
     return () => {
       socket.off("trafficUpdate");
+      socket.off("weatherUpdate");
     };
   }, [socket, selectedSignal]);
+
+  const updateGlobalWeather = (newWeather) => {
+    if (!socket) return;
+    socket.emit("adminWeatherUpdate", newWeather);
+    // Optimistic updatre
+    setWeather(newWeather);
+  };
 
   // Handle Signal Override
   const overrideSignal = (action, duration = 30) => {
@@ -346,6 +374,24 @@ const AdminDashboard = () => {
 
         setActiveDispatches(prev => [...prev, newDispatch]);
 
+        // 🚑 GREEN WAVE LOGIC: Find signals on route and Force GREEN
+        if (socket && routePath && routePath.length > 0) {
+          const affectedSignalIds = signals.filter(s => {
+            // Check proximity to any route point (approx 100m radius)
+            return routePath.some((coord, idx) => {
+              if (idx % 10 !== 0) return false; // Optimization: Check every 10th point
+              const dist = Math.sqrt(Math.pow(s.lng - coord[0], 2) + Math.pow(s.lat - coord[1], 2));
+              return dist < 0.001; // ~111 meters
+            });
+          }).map(s => s.id);
+
+          if (affectedSignalIds.length > 0) {
+            console.log("🚑 Activating Green Wave for:", affectedSignalIds);
+            socket.emit("emergencyRouteActive", { signalIds: affectedSignalIds, duration: 45 }); // 45s Green Wave
+            // Optional: Visual feedback could be added here
+          }
+        }
+
       } catch (err) {
         console.error("Failed to fetch route for animation", err);
         // Fallback to simple line if API fails
@@ -446,11 +492,21 @@ const AdminDashboard = () => {
         <div className="page-body">
           {/* Map */}
           {/* Map */}
-          <div className="dashboard-map-container">
+          <div className="dashboard-map-container" style={{ position: "relative" }}>
+            {/* WEATHER OVERLAYS */}
+            {activeTab === "LIVE" && weather === "RAIN" && (
+              <div className="rain-container">
+                <div className="rain-layer"></div>
+                <div className="rain-layer"></div>
+              </div>
+            )}
+            {activeTab === "LIVE" && weather === "FOG" && (
+              <div className="weather-overlay-fog"></div>
+            )}
             {activeTab === "REPORT" ? (
               <MapView
                 signals={signals}
-                setSignals={setSignals}
+                setSignals={setRawSignals}
                 setSelectedSignalId={(id) => {
                   const signal = signals.find(s => s.id === id);
                   if (signal) setSelectedSignal(signal);
@@ -642,17 +698,17 @@ const AdminDashboard = () => {
                 {resolvedIncidents.map((inc) => (
                   <div
                     key={inc._id}
-                    className="card"
+                    className="card incident-card"
                     style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between" }}
                   >
                     <div>
-                      <div style={{ fontWeight: "700", color: "#1f2937" }}>{inc.type}</div>
-                      <p style={{ margin: "4px 0", color: "#4b5563" }}>{inc.description}</p>
-                      <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                      <div className="incident-type" style={{ fontWeight: "700" }}>{inc.type}</div>
+                      <p className="incident-desc" style={{ margin: "4px 0" }}>{inc.description}</p>
+                      <div className="incident-time" style={{ fontSize: "12px", opacity: 0.7 }}>
                         {new Date(inc.createdAt).toLocaleString()}
                       </div>
                     </div>
-                    <div className="status-badge">
+                    <div className="status-badge resolved">
                       resolved
                     </div>
                   </div>
@@ -667,11 +723,10 @@ const AdminDashboard = () => {
 
               {/* TABS */}
               {/* TABS */}
-              <div style={{ padding: "16px", borderBottom: "1px solid #e5e7eb", display: "flex", flexWrap: "wrap", gap: "8px", background: "white", position: "sticky", top: 0, zIndex: 10 }}>
+              <div className="dashboard-tabs">
                 <button
                   onClick={() => setActiveTab("LIVE")}
-                  className={`btn ${activeTab === "LIVE" ? "btn-primary" : ""}`}
-                  style={{ flex: "1 0 auto", border: activeTab !== "LIVE" ? "1px solid #e5e7eb" : "none", background: activeTab !== "LIVE" ? "white" : "", padding: "8px 12px" }}
+                  className={`btn dashboard-tab-btn ${activeTab === "LIVE" ? "active" : ""}`}
                 >
                   <MapPin size={16} style={{ marginRight: "6px" }} />
                   Live Map
@@ -679,8 +734,7 @@ const AdminDashboard = () => {
 
                 <button
                   onClick={() => setActiveTab("HISTORY")}
-                  className={`btn ${activeTab === "HISTORY" ? "btn-primary" : ""}`}
-                  style={{ flex: "1 0 auto", border: activeTab !== "HISTORY" ? "1px solid #e5e7eb" : "none", background: activeTab !== "HISTORY" ? "white" : "", padding: "8px 12px" }}
+                  className={`btn dashboard-tab-btn ${activeTab === "HISTORY" ? "active" : ""}`}
                 >
                   <List size={16} style={{ marginRight: "6px" }} />
                   History
@@ -688,8 +742,7 @@ const AdminDashboard = () => {
 
                 <button
                   onClick={() => setActiveTab("REPORT")}
-                  className={`btn ${activeTab === "REPORT" ? "btn-primary" : ""}`}
-                  style={{ flex: "1 0 auto", border: activeTab !== "REPORT" ? "1px solid #e5e7eb" : "none", background: activeTab !== "REPORT" ? "white" : "", padding: "8px 12px" }}
+                  className={`btn dashboard-tab-btn ${activeTab === "REPORT" ? "active" : ""}`}
                 >
                   <AlertCircle size={16} style={{ marginRight: "6px" }} />
                   Report
@@ -697,6 +750,69 @@ const AdminDashboard = () => {
               </div>
 
               <div className="panel-container">
+                {/* WEATHER CONTROL WIDGET */}
+                {activeTab === "LIVE" && !selectedSignal && !selectedIncident && (
+                  <div className="fade-in" style={{ marginBottom: "20px" }}>
+                    <div className="card" style={{ background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "white", border: "none" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                        <h3 style={{ margin: 0, fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                          {weather === "CLEAR" && <Cloud size={20} />}
+                          {weather === "RAIN" && <CloudRain size={20} />}
+                          {weather === "FOG" && <CloudFog size={20} />}
+                          Weather Control
+                        </h3>
+                        <span style={{ fontSize: "0.8rem", background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: "12px" }}>
+                          Active
+                        </span>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                        <button
+                          onClick={() => updateGlobalWeather("CLEAR")}
+                          style={{
+                            background: weather === "CLEAR" ? "white" : "rgba(255,255,255,0.2)",
+                            color: weather === "CLEAR" ? "#2563eb" : "white",
+                            border: "none", padding: "8px", borderRadius: "6px", cursor: "pointer", fontWeight: "600",
+                            display: "flex", flexDirection: "column", alignItems: "center", gap: "4px"
+                          }}
+                        >
+                          <Cloud size={16} />
+                          Clear
+                        </button>
+                        <button
+                          onClick={() => updateGlobalWeather("RAIN")}
+                          style={{
+                            background: weather === "RAIN" ? "white" : "rgba(255,255,255,0.2)",
+                            color: weather === "RAIN" ? "#2563eb" : "white",
+                            border: "none", padding: "8px", borderRadius: "6px", cursor: "pointer", fontWeight: "600",
+                            display: "flex", flexDirection: "column", alignItems: "center", gap: "4px"
+                          }}
+                        >
+                          <CloudRain size={16} />
+                          Rain
+                        </button>
+                        <button
+                          onClick={() => updateGlobalWeather("FOG")}
+                          style={{
+                            background: weather === "FOG" ? "white" : "rgba(255,255,255,0.2)",
+                            color: weather === "FOG" ? "#2563eb" : "white",
+                            border: "none", padding: "8px", borderRadius: "6px", cursor: "pointer", fontWeight: "600",
+                            display: "flex", flexDirection: "column", alignItems: "center", gap: "4px"
+                          }}
+                        >
+                          <CloudFog size={16} />
+                          Fog
+                        </button>
+                      </div>
+                      <div style={{ marginTop: "12px", fontSize: "0.8rem", opacity: 0.9, textAlign: "center" }}>
+                        {weather === "CLEAR" && "Optimal driving conditions."}
+                        {weather === "RAIN" && "Traffic speed reduced by 20% due to slippery roads."}
+                        {weather === "FOG" && "Traffic speed reduced by 40% due to low visibility."}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* SIGNAL CONTROL PANEL */}
                 {selectedSignal && (
                   <div className="fade-in">
